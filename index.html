@@ -1,103 +1,182 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8" />
 <title>Generate a random walk on Google Maps</title>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCQGodOQz_ISgHCeppOskqTJDXiW9WJ2kg&callback=initMap&libraries=geometry,places" type="text/javascript"></script>
+<style>
+  /* Always set the map height explicitly to define the size of the div
+   * element that contains the map. */
+  #map {
+    height: 100%;
+  }
+  /* Optional: Makes the sample page fill the window. */
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+</style>
 </head>
  
-<body bgcolor="#ffffff" text="#000000" link="#ff0000" vlink="#800000" alink="#ff00ff" background="?">
-<h3>My Google Maps Demo</h3>
+<body>
+<input id="pac-input" class="controls" type="text" placeholder="Search Box">
 <!--The div element for the map -->
 <div id="map"></div>
-<div id="directions-panel"></div>
 <!-- Replace the value of the key parameter with your own API key. -->
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCQGodOQz_ISgHCeppOskqTJDXiW9WJ2kg&callback=initMap&libraries=geometry" type="text/javascript"></script>
 <script type="text/javascript">
+ var directionsService;
+ var directionsRenderer;
 
-var directionsService;
-var directionsRenderer;
+ // Initialize and add the map
+ function initMap() {
+     directionsService = new google.maps.DirectionsService;
+     directionsRenderer = new google.maps.DirectionsRenderer;
 
-// Initialize and add the map
-window.initMap = function() {
+     // home latitude/longitude
+     // defaulting to O'Connell Street, Dublin
+     var home = {
+         lat: 53.3506006,
+         lng: -6.2625474
+     };
+     // The map, centered at home
+     var mapElement = document.getElementById('map');
+     var map = new google.maps.Map(mapElement, {
+         zoom: 13,
+         center: home
+     });
 
-  directionsService = new google.maps.DirectionsService;
-  directionsRenderer = new google.maps.DirectionsRenderer;
-  
-  // home latitude/longitude
-  // defaulting to O'Connell Street, Dublin
-  var home = {lat: 53.3506006, lng: -6.2625474};
-  // The map, centered at home
-  var mapElement = document.getElementById('map');
-  var map = new google.maps.Map(mapElement, {zoom: 13, center: home});
-  directionsRenderer.setMap(map);
- 
-  // A circle, with 2km radius, centered at home
-   var twoKmRadius = new google.maps.Circle({
-      strokeColor: '#FF0000',
-      strokeOpacity: 0.8,
-      strokeWeight: 2,
-      fillColor: '#FF0000',
-      fillOpacity: 0.05,
-      map: map,
-      center: home,
-      radius: 2000
-    });
-  
-  // Position a marker at home
-  var marker = new google.maps.Marker({position: home, map: map});
-  // Array of waypoints
-  var waypoints = new Array();
-  // Number of waypoints to add
-  var markers = 5;
-  
-  var degreesInCircle = 360;
-  var increase = degreesInCircle / markers;
-  for (var bearing = 0; bearing < degreesInCircle; bearing += increase) {
- 
-    // Distance is a random number at most 2000m (2km) from home
-    var distanceFromHome = Math.random() * 2000;
-    // Calculate a point on the map, at a random distance from home
-    // within the 2km radius
-    var waypoint = google.maps.geometry.spherical.computeOffset(marker.getPosition(), distanceFromHome, bearing);
-    // Push a new waypoint to the array
-    waypoints.push({location: waypoint, stopover: true});
- 
-  }
- 
-  // Calculate a walkin route from home to home, 
-  // with the waypoints created above
-  directionsService.route({
-    origin: marker.getPosition(),
-    destination: marker.getPosition(),
-    waypoints: waypoints,
-    optimizeWaypoints: true,
-    travelMode: 'WALKING',
-    avoidHighways: true
-  }, function(response, status) {
-    if (status === 'OK') {
-      directionsRenderer.setDirections(response);
-      var route = response.routes[0];
-      console.log(route);
-      var summaryPanel = document.getElementById('directions-panel');
-      summaryPanel.innerHTML = '';
-      var distance = 0;
-      // For each route, display summary information.
-      for (var i = 0; i < route.legs.length; i++) {
-        var routeSegment = i + 1;
-        var leg = route.legs[i];
-        summaryPanel.innerHTML += '<b>Route Segment: ' + routeSegment +
-            '</b><br>';
-        summaryPanel.innerHTML += leg.start_address + ' to ';
-        summaryPanel.innerHTML += leg.end_address + '<br>';
-        summaryPanel.innerHTML += leg.distance.text + '<br><br>';
-        distance += leg.distance.value;
-      }
-      summaryPanel.innerHTML += distance + "m<br>";
-    } else {
-      window.alert('Directions request failed due to ' + status);
-    }
-  });
- 
-}
+     var input = document.getElementById('pac-input');
+     var searchBox = new google.maps.places.SearchBox(input);
+     map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+     // Bias the SearchBox results towards current map's viewport.
+     map.addListener('bounds_changed', function() {
+       searchBox.setBounds(map.getBounds());
+     });
+     
+     directionsRenderer.setMap(map);
+     var markers = [];
+
+     searchBox.addListener('places_changed', function() {
+         var places = searchBox.getPlaces();
+
+         if (places.length == 0) {
+             return;
+         }
+
+         // Clear out the old markers.
+         markers.forEach(function(marker) {
+             marker.setMap(null);
+         });
+         markers = [];
+
+         // For each place, get the icon, name and location.
+         var bounds = new google.maps.LatLngBounds();
+         places.forEach(function(place) {
+             home = place.geometry.location;
+             if (!place.geometry) {
+                 console.log("Returned place contains no geometry");
+                 return;
+             }
+             var icon = {
+               url: place.icon,
+               size: new google.maps.Size(71, 71),
+               origin: new google.maps.Point(0, 0),
+               anchor: new google.maps.Point(17, 34),
+               scaledSize: new google.maps.Size(25, 25)
+             };
+             // Create a marker for each place.
+             markers.push(new google.maps.Marker({
+                 map: map,
+                 icon: icon,
+                 title: place.name,
+                 position: place.geometry.location
+             }));
+
+             // A circle, with 2km radius, centered at home
+             var twoKmRadius = new google.maps.Circle({
+                 strokeColor: '#FF0000',
+                 strokeOpacity: 0.8,
+                 strokeWeight: 2,
+                 fillColor: '#FF0000',
+                 fillOpacity: 0.05,
+                 map: map,
+                 center: home,
+                 radius: 2000
+             });
+
+             // Position a marker at home
+             var marker = new google.maps.Marker({
+                 position: home,
+                 map: map
+             });
+             // Array of waypoints
+             var waypoints = new Array();
+             // Number of waypoints to add
+             var waypointMarkers = 5;
+
+             var degreesInCircle = 360;
+             var increase = degreesInCircle / waypointMarkers;
+             for (var bearing = 0; bearing < degreesInCircle; bearing += increase) {
+
+                 // Distance is a random number at most 2000m (2km) from home
+                 var distanceFromHome = Math.random() * 2000;
+                 // Calculate a point on the map, at a random distance from home
+                 // within the 2km radius
+                 var waypoint = google.maps.geometry.spherical.computeOffset(marker.getPosition(), distanceFromHome, bearing);
+                 // Push a new waypoint to the array
+                 waypoints.push({
+                     location: waypoint,
+                     stopover: true
+                 });
+
+             }
+
+             // Calculate a walking route from home to home, 
+             // with the waypoints created above
+             directionsService.route({
+                 origin: marker.getPosition(),
+                 destination: marker.getPosition(),
+                 waypoints: waypoints,
+                 optimizeWaypoints: true,
+                 travelMode: 'WALKING',
+                 avoidHighways: true
+             }, function(response, status) {
+                 if (status === 'OK') {
+                     console.log('Directions created');
+                     directionsRenderer.setDirections(response);
+                     /*
+                           var route = response.routes[0];
+                           var summaryPanel = document.getElementById('directions-panel');
+                           summaryPanel.innerHTML = '';
+                           var distance = 0;
+                           // For each route, display summary information.
+                           for (var i = 0; i < route.legs.length; i++) {
+                             var routeSegment = i + 1;
+                             var leg = route.legs[i];
+                             summaryPanel.innerHTML += '<b>Route Segment: ' + routeSegment +
+                                 '</b><br>';
+                             summaryPanel.innerHTML += leg.start_address + ' to ';
+                             summaryPanel.innerHTML += leg.end_address + '<br>';
+                             summaryPanel.innerHTML += leg.distance.text + '<br><br>';
+                             distance += leg.distance.value;
+                           }
+                           summaryPanel.innerHTML += distance + "m<br>";
+                     */
+                 } else {
+                     window.alert('Directions request failed due to ' + status);
+                 }
+             });
+             if (place.geometry.viewport) {
+                 // Only geocodes have viewport.
+                 bounds.union(place.geometry.viewport);
+             } else {
+                 bounds.extend(place.geometry.location);
+             }
+         });
+         map.fitBounds(bounds);
+     });
+ }
 </script>
 </body>
 </html>
