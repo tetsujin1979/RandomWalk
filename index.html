@@ -67,6 +67,29 @@ html, body {
      font-size: 18px;
 }
 
+@media only screen and (min-device-width: 300px) and (max-device-width: 1024px) and (orientation:portrait) {
+  #controls {
+       width: 35%;
+       background-color: #f5f5f0;
+       margin: 5px;
+       padding: 5px;
+       border-radius: 15px;
+       opacity: 0.85;
+  }
+
+  .info {
+       width: 95%;
+       font-size: 40px;
+  }
+  
+  #placeInput {
+    font-size: 45px;
+  }
+  
+  #recreateRoute {
+    font-size: 45px;
+  }
+}
 </style>
 </head>
  
@@ -80,10 +103,9 @@ html, body {
     <input type="range" min="1" max="20" value="5" class="slider" id="waypointsRange">
     <p class="info">Waypoints: <span id="waypointsValue" style="float: right;"></span></p>
   </div>
-  <p class="info">Post Code</p>
-  <input id="place-input" type="text" placeholder="Post Code" style="width: 95%;">
-  <button id="recreate-route" onclick="placesChanged()">Recreate</button>
-</div>
+  <input id="placeInput" type="text" placeholder="Post Code" style="width: 95%; display: block;">
+  <button id="recreateRoute" onclick="placesChanged()" style="display: none">Recreate</button>
+</div> 
 <!--The div element for the map -->
 <div id="map"></div>
 <!-- Replace the value of the key parameter with your own API key. -->
@@ -99,6 +121,9 @@ var slider = document.getElementById("myRange");
 var waypointsRange = document.getElementById("waypointsRange");
 var output = document.getElementById("demo");
 var waypointsValue = document.getElementById("waypointsValue");
+var input = document.getElementById("placeInput");
+var recreateRoute = document.getElementById("recreateRoute");
+
 var waypointMarkers = 5;
 var radius = 2000;
 var maxRadius = 5000;
@@ -135,7 +160,6 @@ function initMap() {
     });
 
     var controls = document.getElementById('controls');
-    var input = document.getElementById('place-input');
     searchBox = new google.maps.places.SearchBox(input);
     map.controls[google.maps.ControlPosition.LEFT_CENTER].push(controls);
     // Bias the SearchBox results towards current map's viewport.
@@ -150,6 +174,9 @@ function initMap() {
 }
 
 function placesChanged() {
+    input.style.display = 'none'
+    recreateRoute.style.display = 'block';
+    
     var places = searchBox.getPlaces();
 
     if (places.length == 0) {
