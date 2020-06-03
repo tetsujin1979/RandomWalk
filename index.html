@@ -279,24 +279,6 @@ function placesChanged() {
             if (status === 'OK') {
                 console.log('Directions created');
                 directionsRenderer.setDirections(response);
-                /*
-                      var route = response.routes[0];
-                      var summaryPanel = document.getElementById('directions-panel');
-                      summaryPanel.innerHTML = '';
-                      var distance = 0;
-                      // For each route, display summary information.
-                      for (var i = 0; i < route.legs.length; i++) {
-                        var routeSegment = i + 1;
-                        var leg = route.legs[i];
-                        summaryPanel.innerHTML += '<b>Route Segment: ' + routeSegment +
-                            '</b><br>';
-                        summaryPanel.innerHTML += leg.start_address + ' to ';
-                        summaryPanel.innerHTML += leg.end_address + '<br>';
-                        summaryPanel.innerHTML += leg.distance.text + '<br><br>';
-                        distance += leg.distance.value;
-                      }
-                      summaryPanel.innerHTML += distance + "m<br>";
-                */
             } else {
                 window.alert('Directions request failed due to ' + status);
             }
